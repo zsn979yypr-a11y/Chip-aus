@@ -85,16 +85,34 @@
     background: #0b0c0d;
     border: 1px solid var(--border);
     overflow: hidden;
+    position: relative;
+    transition: background 0.6s ease;
   }
-  .progress-fill {
-    height: 100%;
+  .progress-track.is-day { background: #ffffff; }
+  .progress-track.is-night { background: #0b0c0d; }
+  .progress-flag {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
     width: 0%;
-    background: var(--good);
-    border-radius: 10px 0 0 10px;
     transition: width 0.5s ease;
+    background-image:
+      linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff),
+      linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff);
+    background-size: 22px 22px;
+    background-position: 0 0, 11px 11px;
+    background-color: #0069b4;
   }
-  .progress-fill.full { border-radius: 10px; }
-  .progress-fill.over-cap { box-shadow: inset -3px 0 0 var(--accent); }
+  .progress-flag.over-cap { box-shadow: inset -3px 0 0 var(--accent); }
+  .progress-car {
+    position: absolute;
+    right: -9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 19px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.4));
+    pointer-events: none;
+  }
   .timeline-labels {
     display: flex;
     justify-content: space-between;
@@ -302,8 +320,10 @@
       <div class="row-label">Tagesfortschritt</div>
       <div class="progress-pct" id="progressPct">0%</div>
     </div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progressFill"></div>
+    <div class="progress-track" id="progressTrack">
+      <div class="progress-flag" id="progressFill">
+        <span class="progress-car">🚓</span>
+      </div>
     </div>
     <div class="timeline-labels">
       <span>0:00</span>
@@ -328,6 +348,7 @@
   const progressFill = document.getElementById("progressFill");
   const progressPct = document.getElementById("progressPct");
   const progressTarget = document.getElementById("progressTarget");
+  const progressTrack = document.getElementById("progressTrack");
   const nettoValue = document.getElementById("nettoValue");
   const restLabel = document.getElementById("restLabel");
   const restValue = document.getElementById("restValue");
@@ -423,10 +444,15 @@
     const pct = (netto / target) * 100;
     const clampedPct = Math.max(0, Math.min(100, pct));
     progressFill.style.width = clampedPct + "%";
-    progressFill.className = "progress-fill" + (clampedPct >= 100 ? " full" : "") + (netto > target ? " over-cap" : "");
+    progressFill.className = "progress-flag" + (netto > target ? " over-cap" : "");
     progressPct.textContent = Math.round(Math.max(0, pct)) + "%";
     progressPct.className = "progress-pct" + (netto > target ? " over" : "");
     progressTarget.textContent = fmtDuration(target);
+
+    const hour = new Date().getHours();
+    const isDay = hour >= 6 && hour < 20;
+    progressTrack.classList.toggle("is-day", isDay);
+    progressTrack.classList.toggle("is-night", !isDay);
   }
 
   // Findet die "Sackgasse"-Zone, in der Weiterarbeiten die Netto-Zeit nicht erhöht.
