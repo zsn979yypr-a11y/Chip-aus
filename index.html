@@ -438,8 +438,8 @@
     for (let i = 0; i < minutesList.length; i++) {
       if (minutesList[i] === null) continue;
       for (let j = 0; j < i; j++) {
-        if (minutesList[j] !== null && minutesList[j] >= minutesList[i]) {
-          errorMsg.textContent = "Die Zeiten müssen der Reihe nach ansteigen.";
+        if (minutesList[j] !== null && minutesList[j] > minutesList[i]) {
+          errorMsg.textContent = "Die Zeiten dürfen nicht rückwärts laufen.";
           nettoValue.textContent = "–";
           restValue.textContent = "–";
           feierabendValue.textContent = "–";
@@ -559,8 +559,8 @@
     const lastVal = len > 0 ? parseHM(state.times[len - 1]) : null;
     const nowStr = currentHM();
     const nowVal = parseHM(nowStr);
-    if (lastVal !== null && nowVal <= lastVal) {
-      errorMsg.textContent = "Bitte kurz warten – gleiche Minute wie der letzte Stempel.";
+    if (lastVal !== null && nowVal < lastVal) {
+      errorMsg.textContent = "Die Uhrzeit liegt vor dem letzten Stempel.";
       return;
     }
     state.times = state.times.slice(0, len);
