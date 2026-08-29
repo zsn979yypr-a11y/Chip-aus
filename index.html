@@ -13,7 +13,8 @@
     --border: #e0e0e2;
     --accent: #0071e3;
     --accent-text: #ffffff;
-    --good: #1a8a3e;
+    --baden-yellow: #ffcc00;
+    --baden-red: #d0103a;
     --warn-bg: #fff4e5;
     --warn-border: #f5a623;
     --warn-text: #7a4a00;
@@ -29,7 +30,6 @@
       --border: #333336;
       --accent: #0a84ff;
       --accent-text: #ffffff;
-      --good: #32d74b;
       --warn-bg: #3a2c00;
       --warn-border: #b8860b;
       --warn-text: #ffd479;
@@ -152,7 +152,10 @@
     padding: 4px 0;
     border-radius: 8px;
   }
-  .punch-tag.an { background: rgba(26,138,62,0.15); color: var(--good); }
+  .punch-tag.an {
+    background: linear-gradient(180deg, rgba(255,204,0,0.28) 50%, rgba(208,16,58,0.2) 50%);
+    color: var(--baden-red);
+  }
   .punch-tag.aus { background: rgba(208,2,27,0.12); color: var(--danger); }
   .punch-row input[type="time"] {
     flex: 1;
@@ -203,7 +206,7 @@
   }
   .toggle-btn:hover { filter: brightness(1.06); }
   .toggle-btn:active { transform: scale(0.985); }
-  .toggle-btn.start { background: var(--good); }
+  .toggle-btn.start { background: linear-gradient(180deg, var(--baden-yellow) 50%, var(--baden-red) 50%); }
   .toggle-btn.stop { background: var(--danger); }
   .toggle-btn .btn-icon { width: 13px; height: 13px; flex-shrink: 0; background: #fff; }
   .toggle-btn.start .btn-icon { border-radius: 50%; }
@@ -239,7 +242,12 @@
   .stat-value.small {
     font-size: 30px;
   }
-  .stat-value.good { color: var(--good); }
+  .stat-value.good {
+    background: linear-gradient(180deg, var(--baden-yellow) 46%, var(--baden-red) 54%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   .stat-value.danger { color: var(--danger); }
   .divider {
     height: 1px;
