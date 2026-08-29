@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chip-aus – Arbeitszeitrechner</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --border: #e0e0e2;
+    --accent: #0071e3;
+    --accent-text: #ffffff;
+    --good: #1a8a3e;
+    --warn-bg: #fff4e5;
+    --warn-border: #f5a623;
+    --warn-text: #7a4a00;
+    --danger: #d0021b;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #f5f5f7;
+      --muted: #9a9a9e;
+      --border: #333336;
+      --accent: #0a84ff;
+      --accent-text: #ffffff;
+      --good: #32d74b;
+      --warn-bg: #3a2c00;
+      --warn-border: #b8860b;
+      --warn-text: #ffd479;
+      --danger: #ff453a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px 14px 60px;
+  }
+  .wrap { max-width: 460px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 4px 0 20px;
+    text-align: center;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .row-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .soll-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .soll-row input {
+    width: 90px;
+    font-size: 18px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    text-align: center;
+  }
+  .punch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .punch-tag {
+    font-size: 13px;
+    font-weight: 700;
+    width: 46px;
+    flex-shrink: 0;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 8px;
+  }
+  .punch-tag.an { background: rgba(26,138,62,0.15); color: var(--good); }
+  .punch-tag.aus { background: rgba(208,2,27,0.12); color: var(--danger); }
+  .punch-row input[type="time"] {
+    flex: 1;
+    font-size: 18px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .del-btn {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  .del-btn:hover { color: var(--danger); }
+  .add-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .error {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .stat {
+    text-align: center;
+    padding: 6px 0;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-size: 44px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat-value.small {
+    font-size: 30px;
+  }
+  .stat-value.good { color: var(--good); }
+  .stat-value.danger { color: var(--danger); }
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+  .substats {
+    display: flex;
+    gap: 10px;
+  }
+  .substats .stat { flex: 1; }
+  .warn-banner {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-text);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 16px;
+  }
+  .warn-banner b { display: block; margin-bottom: 4px; font-size: 15px; }
+  .meta {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Arbeitszeitrechner</h1>
+
+  <div class="card">
+    <div class="row-label">Tagessoll</div>
+    <div class="soll-row">
+      <span style="color:var(--muted); font-size:14px;">Soll-Arbeitszeit pro Tag</span>
+      <input type="number" id="sollInput" min="0" max="24" step="0.25" value="8"> Std
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row-label">Stempelzeiten</div>
+    <div id="punchList"></div>
+    <button class="add-btn" id="addBtn">+ Zeit hinzufügen</button>
+    <div class="error" id="errorMsg"></div>
+  </div>
+
+  <div id="warnBanner"></div>
+
+  <div class="card">
+    <div class="stat">
+      <div class="stat-label">Netto-Arbeitszeit</div>
+      <div class="stat-value" id="nettoValue">0:00</div>
+    </div>
+    <div class="divider"></div>
+    <div class="substats">
+      <div class="stat">
+        <div class="stat-label" id="restLabel">Fehlt bis Soll</div>
+        <div class="stat-value small" id="restValue">0:00</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Feierabend</div>
+        <div class="stat-value small" id="feierabendValue">–</div>
+      </div>
+    </div>
+    <div class="meta" id="metaInfo"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = "chip-aus-state-v1";
+  const THRESH_1 = 360;   // 6h in Minuten
+  const REQ_1 = 30;
+  const THRESH_2 = 540;   // 9h in Minuten
+  const REQ_2 = 45;
+
+  const punchListEl = document.getElementById("punchList");
+  const addBtn = document.getElementById("addBtn");
+  const sollInput = document.getElementById("sollInput");
+  const errorMsg = document.getElementById("errorMsg");
+  const warnBanner = document.getElementById("warnBanner");
+  const nettoValue = document.getElementById("nettoValue");
+  const restLabel = document.getElementById("restLabel");
+  const restValue = document.getElementById("restValue");
+  const feierabendValue = document.getElementById("feierabendValue");
+  const metaInfo = document.getElementById("metaInfo");
+
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.times) && parsed.times.length) {
+          return { times: parsed.times, soll: parsed.soll ?? 8 };
+        }
+      }
+    } catch (e) {}
+    return { times: ["", ""], soll: 8 };
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function parseHM(v) {
+    if (!v) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(v);
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  function fmtDuration(totalMinutes) {
+    const sign = totalMinutes < 0 ? "-" : "";
+    const abs = Math.round(Math.abs(totalMinutes));
+    const h = Math.floor(abs / 60);
+    const m = abs % 60;
+    return sign + h + ":" + String(m).padStart(2, "0");
+  }
+
+  function fmtClock(totalMinutesOfDay) {
+    let m = Math.round(totalMinutesOfDay) % 1440;
+    if (m < 0) m += 1440;
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return String(h).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+  }
+
+  function erforderlichePause(brutto) {
+    let req = 0;
+    if (brutto > THRESH_1) req = REQ_1;
+    if (brutto > THRESH_2) req = REQ_2;
+    return req;
+  }
+
+  // kleinste Brutto-Zeit, die die gewünschte Netto-Zeit ergibt (bei gegebener bereits genommener Pause P)
+  function bruttoForNetto(target, P) {
+    if (target <= THRESH_1) return Math.max(target, 0);
+    const abzug2 = Math.max(0, REQ_1 - P);
+    const b2 = target + abzug2;
+    if (b2 <= THRESH_2) return b2;
+    const abzug3 = Math.max(0, REQ_2 - P);
+    return target + abzug3;
+  }
+
+  // Findet die "Sackgasse"-Zone, in der Weiterarbeiten die Netto-Zeit nicht erhöht.
+  // Gibt {start, end, peakNetto} zurück oder null.
+  function findDipZone(brutto, P) {
+    const zones = [];
+    const end1 = THRESH_1 + Math.max(0, REQ_1 - P);
+    if (end1 > THRESH_1) {
+      zones.push({ start: THRESH_1, end: end1, peakNetto: THRESH_1 });
+    }
+    const abzugAt540Before = Math.max(0, REQ_1 - P);
+    const abzugAt540After = Math.max(0, REQ_2 - P);
+    const jump2 = abzugAt540After - abzugAt540Before;
+    if (jump2 > 0) {
+      const peak = THRESH_2 - abzugAt540Before;
+      zones.push({ start: THRESH_2, end: THRESH_2 + jump2, peakNetto: peak });
+    }
+    for (const z of zones) {
+      if (brutto > z.start && brutto < z.end) return z;
+    }
+    return null;
+  }
+
+  function render() {
+    punchListEl.innerHTML = "";
+    state.times.forEach((t, i) => {
+      const row = document.createElement("div");
+      row.className = "punch-row";
+
+      const tag = document.createElement("div");
+      const isAn = i % 2 === 0;
+      tag.className = "punch-tag " + (isAn ? "an" : "aus");
+      tag.textContent = isAn ? "An" : "Aus";
+      row.appendChild(tag);
+
+      const input = document.createElement("input");
+      input.type = "time";
+      input.value = t;
+      input.addEventListener("input", (e) => {
+        state.times[i] = e.target.value;
+        saveState();
+        update();
+      });
+      row.appendChild(input);
+
+      const del = document.createElement("button");
+      del.className = "del-btn";
+      del.textContent = "✕";
+      del.title = "Zeile löschen";
+      del.addEventListener("click", () => {
+        state.times.splice(i, 1);
+        saveState();
+        render();
+        update();
+      });
+      row.appendChild(del);
+
+      punchListEl.appendChild(row);
+    });
+
+    sollInput.value = state.soll;
+  }
+
+  function update() {
+    errorMsg.textContent = "";
+    warnBanner.innerHTML = "";
+    metaInfo.textContent = "";
+
+    const minutesList = state.times.map(parseHM);
+    const filled = minutesList.filter((m) => m !== null);
+
+    // Validierung: nur gefüllte, aufsteigend sortierte Werte an ihrer Position prüfen
+    for (let i = 0; i < minutesList.length; i++) {
+      if (minutesList[i] === null) continue;
+      for (let j = 0; j < i; j++) {
+        if (minutesList[j] !== null && minutesList[j] >= minutesList[i]) {
+          errorMsg.textContent = "Die Zeiten müssen der Reihe nach ansteigen.";
+          nettoValue.textContent = "–";
+          restValue.textContent = "–";
+          feierabendValue.textContent = "–";
+          return;
+        }
+      }
+    }
+
+    // Nur vollständig ausgefüllte führende Einträge berücksichtigen (bis zur ersten Lücke)
+    let usable = [];
+    for (const m of minutesList) {
+      if (m === null) break;
+      usable.push(m);
+    }
+
+    if (usable.length === 0) {
+      nettoValue.textContent = "0:00";
+      restValue.textContent = fmtDuration(state.soll * 60);
+      feierabendValue.textContent = "–";
+      restLabel.textContent = "Fehlt bis Soll";
+      return;
+    }
+
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+
+    const pairCount = Math.floor(usable.length / 2);
+    const isOpen = usable.length % 2 === 1;
+    const openStart = isOpen ? usable[usable.length - 1] : null;
+
+    let brutto = 0;
+    let bereitsPause = 0;
+
+    for (let i = 0; i < pairCount; i++) {
+      const start = usable[i * 2];
+      const end = usable[i * 2 + 1];
+      brutto += end - start;
+      if (i > 0) {
+        const prevEnd = usable[i * 2 - 1];
+        bereitsPause += start - prevEnd;
+      }
+    }
+
+    if (isOpen) {
+      let liveNow = nowMinutes;
+      if (liveNow < openStart) liveNow += 1440; // über Mitternacht
+      brutto += liveNow - openStart;
+      if (pairCount > 0) {
+        const prevEnd = usable[pairCount * 2 - 1];
+        bereitsPause += openStart - prevEnd;
+      }
+    }
+
+    const erf = erforderlichePause(brutto);
+    const abzug = Math.max(0, erf - bereitsPause);
+    const netto = brutto - abzug;
+    const sollMin = Number(state.soll) * 60;
+    const rest = sollMin - netto;
+
+    nettoValue.textContent = fmtDuration(netto);
+    nettoValue.className = "stat-value" + (netto >= sollMin ? " good" : "");
+
+    if (rest > 0) {
+      restLabel.textContent = "Fehlt bis Soll";
+      restValue.textContent = fmtDuration(rest);
+      restValue.className = "stat-value small";
+    } else {
+      restLabel.textContent = "Überstunden";
+      restValue.textContent = fmtDuration(-rest);
+      restValue.className = "stat-value small good";
+    }
+
+    if (isOpen) {
+      const requiredBrutto = bruttoForNetto(sollMin, bereitsPause);
+      const remainingMinutes = requiredBrutto - brutto;
+      const feierabendClock = fmtClock(nowMinutes + remainingMinutes);
+      if (remainingMinutes <= 0) {
+        feierabendValue.textContent = "jetzt";
+        feierabendValue.className = "stat-value small good";
+      } else {
+        feierabendValue.textContent = feierabendClock;
+        feierabendValue.className = "stat-value small";
+      }
+    } else {
+      feierabendValue.textContent = "–";
+      feierabendValue.className = "stat-value small";
+    }
+
+    // Warnzone: Weiterarbeiten bringt gerade nichts
+    const zone = findDipZone(brutto, bereitsPause);
+    if (zone) {
+      const startClockBrutto = brutto - zone.start; // wie viel Minuten sind wir schon in der Zone
+      let msg = "";
+      if (isOpen) {
+        const remaining = zone.end - brutto;
+        const untilClock = fmtClock(nowMinutes + remaining);
+        msg =
+          "Du bist gerade in der Pausenpflicht-Zone: Weiterarbeiten erhöht deine Netto-Zeit im Moment nicht, " +
+          "weil dabei die Pausenpflicht greift. Erst ab <strong>" + untilClock + "</strong> " +
+          "(Brutto " + fmtDuration(zone.end) + ") lohnt sich Weiterarbeiten wieder.";
+      } else {
+        msg =
+          "Deine Brutto-Arbeitszeit liegt in der Pausenpflicht-Zone (" + fmtDuration(zone.start) +
+          " – " + fmtDuration(zone.end) + "). In diesem Bereich bringt zusätzliche Arbeitszeit keine höhere Netto-Zeit.";
+      }
+      warnBanner.innerHTML =
+        '<div class="warn-banner"><b>⚠️ Weiterarbeiten lohnt sich gerade nicht</b>' + msg + "</div>";
+    }
+
+    metaInfo.textContent =
+      "Brutto " + fmtDuration(brutto) + " · bereits genommene Pause " + fmtDuration(bereitsPause) +
+      " · Pausenabzug " + fmtDuration(abzug);
+  }
+
+  addBtn.addEventListener("click", () => {
+    state.times.push("");
+    saveState();
+    render();
+    update();
+  });
+
+  sollInput.addEventListener("input", (e) => {
+    const v = parseFloat(e.target.value);
+    state.soll = isNaN(v) ? 8 : v;
+    saveState();
+    update();
+  });
+
+  render();
+  update();
+  setInterval(update, 15000);
+})();
+</script>
+</body>
+</html>
