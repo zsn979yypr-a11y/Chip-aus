@@ -72,41 +72,29 @@
     margin-bottom: 10px;
   }
   .row-label-line .row-label { margin-bottom: 0; }
-  .legend {
-    display: flex;
-    gap: 12px;
-    font-size: 11px;
+  .progress-pct {
+    font-size: 13px;
+    font-weight: 700;
     color: var(--muted);
-    text-transform: none;
-    letter-spacing: normal;
+    font-variant-numeric: tabular-nums;
   }
-  .legend-item { display: flex; align-items: center; gap: 5px; }
-  .legend-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-  .legend-swatch.work { background: var(--good); }
-  .legend-swatch.break {
-    background-color: var(--bg);
-    background-image: repeating-linear-gradient(45deg, var(--warn-border) 0 2.5px, transparent 2.5px 5px);
-    border: 1px solid var(--warn-border);
-  }
-  .timeline {
-    display: flex;
+  .progress-pct.over { color: var(--accent); }
+  .progress-track {
     height: 30px;
     border-radius: 10px;
-    overflow: hidden;
+    background: #0b0c0d;
     border: 1px solid var(--border);
-    background: var(--bg);
+    overflow: hidden;
   }
-  .timeline-seg { height: 100%; }
-  .timeline-seg.work { background: var(--good); }
-  .timeline-seg.break {
-    background-color: var(--bg);
-    background-image: repeating-linear-gradient(45deg, var(--warn-border) 0 4px, transparent 4px 8px);
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--good);
+    border-radius: 10px 0 0 10px;
+    transition: width 0.5s ease;
   }
+  .progress-fill.full { border-radius: 10px; }
+  .progress-fill.over-cap { box-shadow: inset -3px 0 0 var(--accent); }
   .timeline-labels {
     display: flex;
     justify-content: space-between;
@@ -309,18 +297,17 @@
     <div class="meta" id="metaInfo"></div>
   </div>
 
-  <div class="card" id="timelineCard" style="display:none;">
+  <div class="card">
     <div class="row-label-line">
-      <div class="row-label">Tagesverlauf</div>
-      <div class="legend">
-        <span class="legend-item"><span class="legend-swatch work"></span>Arbeit</span>
-        <span class="legend-item"><span class="legend-swatch break"></span>Pause</span>
-      </div>
+      <div class="row-label">Tagesfortschritt</div>
+      <div class="progress-pct" id="progressPct">0%</div>
     </div>
-    <div class="timeline" id="timelineBar"></div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
     <div class="timeline-labels">
-      <span id="timelineStart">–</span>
-      <span id="timelineEnd">–</span>
+      <span>0:00</span>
+      <span id="progressTarget">8:00</span>
     </div>
   </div>
 </div>
@@ -338,10 +325,9 @@
   const sollInput = document.getElementById("sollInput");
   const errorMsg = document.getElementById("errorMsg");
   const warnBanner = document.getElementById("warnBanner");
-  const timelineCard = document.getElementById("timelineCard");
-  const timelineBar = document.getElementById("timelineBar");
-  const timelineStart = document.getElementById("timelineStart");
-  const timelineEnd = document.getElementById("timelineEnd");
+  const progressFill = document.getElementById("progressFill");
+  const progressPct = document.getElementById("progressPct");
+  const progressTarget = document.getElementById("progressTarget");
   const nettoValue = document.getElementById("nettoValue");
   const restLabel = document.getElementById("restLabel");
   const restValue = document.getElementById("restValue");
@@ -432,40 +418,15 @@
     return target + abzug3;
   }
 
-  function renderTimeline(usable, isOpen, openStart, liveNow) {
-    const pairCount = Math.floor(usable.length / 2);
-    const segs = [];
-    for (let i = 0; i < pairCount; i++) {
-      const s = usable[i * 2], e = usable[i * 2 + 1];
-      if (i > 0) {
-        const prevEnd = usable[i * 2 - 1];
-        if (s > prevEnd) segs.push({ type: "break", start: prevEnd, end: s });
-      }
-      if (e > s) segs.push({ type: "work", start: s, end: e });
-    }
-    if (isOpen) {
-      if (pairCount > 0) {
-        const prevEnd = usable[pairCount * 2 - 1];
-        if (openStart > prevEnd) segs.push({ type: "break", start: prevEnd, end: openStart });
-      }
-      if (liveNow > openStart) segs.push({ type: "work", start: openStart, end: liveNow });
-    }
-    if (segs.length === 0) {
-      timelineCard.style.display = "none";
-      return;
-    }
-    timelineCard.style.display = "";
-    timelineBar.innerHTML = "";
-    segs.forEach((seg) => {
-      const dur = seg.end - seg.start;
-      const div = document.createElement("div");
-      div.className = "timeline-seg " + seg.type;
-      div.style.flex = dur + " 0 0%";
-      div.title = (seg.type === "work" ? "Arbeit " : "Pause ") + fmtClock(seg.start) + "–" + fmtClock(seg.end) + " (" + fmtDuration(dur) + ")";
-      timelineBar.appendChild(div);
-    });
-    timelineStart.textContent = fmtClock(segs[0].start);
-    timelineEnd.textContent = fmtClock(segs[segs.length - 1].end);
+  function renderProgress(netto, sollMin) {
+    const target = Math.max(sollMin, 1);
+    const pct = (netto / target) * 100;
+    const clampedPct = Math.max(0, Math.min(100, pct));
+    progressFill.style.width = clampedPct + "%";
+    progressFill.className = "progress-fill" + (clampedPct >= 100 ? " full" : "") + (netto > target ? " over-cap" : "");
+    progressPct.textContent = Math.round(Math.max(0, pct)) + "%";
+    progressPct.className = "progress-pct" + (netto > target ? " over" : "");
+    progressTarget.textContent = fmtDuration(target);
   }
 
   // Findet die "Sackgasse"-Zone, in der Weiterarbeiten die Netto-Zeit nicht erhöht.
@@ -565,7 +526,7 @@
       restValue.textContent = fmtDuration(state.soll * 60);
       feierabendValue.textContent = "–";
       restLabel.textContent = "Fehlt bis Soll";
-      timelineCard.style.display = "none";
+      renderProgress(0, Number(state.soll) * 60);
       return;
     }
 
@@ -660,7 +621,7 @@
       "Brutto " + fmtDuration(brutto) + " · bereits genommene Pause " + fmtDuration(bereitsPause) +
       " · Pausenabzug " + fmtDuration(abzug);
 
-    renderTimeline(usable, isOpen, openStart, liveNow);
+    renderProgress(netto, sollMin);
   }
 
   toggleBtn.addEventListener("click", () => {
