@@ -129,6 +129,35 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: transform 0.06s ease, filter 0.15s ease;
+  }
+  .toggle-btn:hover { filter: brightness(1.06); }
+  .toggle-btn:active { transform: scale(0.985); }
+  .toggle-btn.start { background: var(--good); }
+  .toggle-btn.stop { background: var(--danger); }
+  .toggle-btn .btn-icon { width: 13px; height: 13px; flex-shrink: 0; background: #fff; }
+  .toggle-btn.start .btn-icon { border-radius: 50%; }
+  .toggle-btn.stop .btn-icon { border-radius: 3px; }
+  .card-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: -6px;
+    margin-bottom: 10px;
+  }
   .error {
     color: var(--danger);
     font-size: 13px;
@@ -189,6 +218,10 @@
 <div class="wrap">
   <h1>Arbeitszeitrechner</h1>
 
+  <button class="toggle-btn start" id="toggleBtn" type="button">
+    <span class="btn-icon"></span>Start
+  </button>
+
   <div class="card">
     <div class="row-label">Tagessoll</div>
     <div class="soll-row">
@@ -199,6 +232,7 @@
 
   <div class="card">
     <div class="row-label">Stempelzeiten</div>
+    <div class="card-hint">Per Knopf erfasst &middot; bei Bedarf hier korrigierbar</div>
     <div id="punchList"></div>
     <button class="add-btn" id="addBtn">+ Zeit hinzufügen</button>
     <div class="error" id="errorMsg"></div>
@@ -244,6 +278,7 @@
   const restValue = document.getElementById("restValue");
   const feierabendValue = document.getElementById("feierabendValue");
   const metaInfo = document.getElementById("metaInfo");
+  const toggleBtn = document.getElementById("toggleBtn");
 
   let state = loadState();
 
@@ -257,7 +292,7 @@
         }
       }
     } catch (e) {}
-    return { times: ["", ""], soll: 8 };
+    return { times: [], soll: 8 };
   }
 
   function saveState() {
@@ -269,6 +304,30 @@
     const m = /^(\d{1,2}):(\d{2})$/.exec(v);
     if (!m) return null;
     return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  function usablePrefixLength(times) {
+    let n = 0;
+    for (const t of times) {
+      if (parseHM(t) === null) break;
+      n++;
+    }
+    return n;
+  }
+
+  function currentHM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function setToggleButton(open) {
+    if (open) {
+      toggleBtn.className = "toggle-btn stop";
+      toggleBtn.innerHTML = '<span class="btn-icon"></span>Stop';
+    } else {
+      toggleBtn.className = "toggle-btn start";
+      toggleBtn.innerHTML = '<span class="btn-icon"></span>Start';
+    }
   }
 
   function fmtDuration(totalMinutes) {
@@ -369,6 +428,8 @@
     errorMsg.textContent = "";
     warnBanner.innerHTML = "";
     metaInfo.textContent = "";
+
+    setToggleButton(usablePrefixLength(state.times) % 2 === 1);
 
     const minutesList = state.times.map(parseHM);
     const filled = minutesList.filter((m) => m !== null);
@@ -492,6 +553,22 @@
       "Brutto " + fmtDuration(brutto) + " · bereits genommene Pause " + fmtDuration(bereitsPause) +
       " · Pausenabzug " + fmtDuration(abzug);
   }
+
+  toggleBtn.addEventListener("click", () => {
+    const len = usablePrefixLength(state.times);
+    const lastVal = len > 0 ? parseHM(state.times[len - 1]) : null;
+    const nowStr = currentHM();
+    const nowVal = parseHM(nowStr);
+    if (lastVal !== null && nowVal <= lastVal) {
+      errorMsg.textContent = "Bitte kurz warten – gleiche Minute wie der letzte Stempel.";
+      return;
+    }
+    state.times = state.times.slice(0, len);
+    state.times.push(nowStr);
+    saveState();
+    render();
+    update();
+  });
 
   addBtn.addEventListener("click", () => {
     state.times.push("");
