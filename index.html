@@ -13,8 +13,8 @@
     --border: #e0e0e2;
     --accent: #0071e3;
     --accent-text: #ffffff;
-    --baden-yellow: #ffcc00;
-    --baden-red: #d0103a;
+    --bavaria-blue: #0069b4;
+    --bavaria-diamond: linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff), linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff);
     --warn-bg: #fff4e5;
     --warn-border: #f5a623;
     --warn-text: #7a4a00;
@@ -95,12 +95,10 @@
     top: 0; left: 0; bottom: 0;
     width: 0%;
     transition: width 0.5s ease;
-    background-image:
-      linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff),
-      linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%, #fff);
+    background-image: var(--bavaria-diamond);
     background-size: 22px 22px;
     background-position: 0 0, 11px 11px;
-    background-color: #0069b4;
+    background-color: var(--bavaria-blue);
   }
   .progress-flag.over-cap { box-shadow: inset -3px 0 0 var(--accent); }
   .progress-car {
@@ -152,10 +150,7 @@
     padding: 4px 0;
     border-radius: 8px;
   }
-  .punch-tag.an {
-    background: linear-gradient(180deg, rgba(255,204,0,0.28) 50%, rgba(208,16,58,0.2) 50%);
-    color: var(--baden-red);
-  }
+  .punch-tag.an { background: var(--bavaria-blue); color: #fff; }
   .punch-tag.aus { background: rgba(208,2,27,0.12); color: var(--danger); }
   .punch-row input[type="time"] {
     flex: 1;
@@ -206,7 +201,12 @@
   }
   .toggle-btn:hover { filter: brightness(1.06); }
   .toggle-btn:active { transform: scale(0.985); }
-  .toggle-btn.start { background: linear-gradient(180deg, var(--baden-yellow) 50%, var(--baden-red) 50%); }
+  .toggle-btn.start {
+    background-image: var(--bavaria-diamond);
+    background-color: var(--bavaria-blue);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+  }
   .toggle-btn.stop { background: var(--danger); }
   .toggle-btn .btn-icon { width: 13px; height: 13px; flex-shrink: 0; background: #fff; }
   .toggle-btn.start .btn-icon { border-radius: 50%; }
@@ -242,12 +242,7 @@
   .stat-value.small {
     font-size: 30px;
   }
-  .stat-value.good {
-    background: linear-gradient(180deg, var(--baden-yellow) 46%, var(--baden-red) 54%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+  .stat-value.good { color: var(--bavaria-blue); }
   .stat-value.danger { color: var(--danger); }
   .divider {
     height: 1px;
