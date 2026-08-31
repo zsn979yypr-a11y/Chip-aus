@@ -912,8 +912,9 @@
 
     // Warnzone: Weiterarbeiten im LAUFENDEN Block bringt gerade nichts (bezieht
     // sich nur auf den aktuell offenen Block, nicht auf frühere Blöcke – die
-    // stehen ja schon fest).
-    if (isOpen) {
+    // stehen ja schon fest). Nur relevant, solange das Tagessoll noch nicht
+    // erreicht ist - danach spielt die kurze "Sackgasse" keine Rolle mehr.
+    if (isOpen && netto < sollMin) {
       const zone = findDipZone(openBlockDuration, 0);
       if (zone) {
         const remaining = zone.end - openBlockDuration;
