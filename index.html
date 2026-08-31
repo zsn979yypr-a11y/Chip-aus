@@ -302,6 +302,41 @@
     margin-bottom: 16px;
   }
   .warn-banner b { display: block; margin-bottom: 4px; font-size: 15px; }
+  .onboarding-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .onboarding-overlay[hidden] { display: none; }
+  .onboarding-card {
+    background: var(--card);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 24px 22px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  .onboarding-card h2 { margin: 0 0 14px; font-size: 19px; }
+  .onboarding-card ul { margin: 0 0 20px; padding-left: 20px; }
+  .onboarding-card li { margin-bottom: 12px; line-height: 1.4; font-size: 14.5px; }
+  .onboarding-card li:last-child { margin-bottom: 0; }
+  .onboarding-card button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .countdown-banner{
     position:fixed;
     left:50%;
@@ -333,6 +368,17 @@
 </style>
 </head>
 <body>
+<div class="onboarding-overlay" id="onboardingOverlay" hidden>
+  <div class="onboarding-card">
+    <h2>👋 Kurz erklärt</h2>
+    <ul>
+      <li><strong>Start/Stop</strong> drücken, wenn du mit der Arbeit beginnst bzw. aufhörst.</li>
+      <li>Zeit falsch oder vergessen? Unter <strong>„Stempelzeiten"</strong> kannst du sie jederzeit von Hand nachtragen oder korrigieren.</li>
+      <li>Willst du vorausplanen? Trag einfach eine Startzeit ein (auch für später) – bei <strong>„Feierabend (vorauss.)"</strong> siehst du direkt, wann du fertig wärst.</li>
+    </ul>
+    <button id="onboardingCloseBtn" type="button">Verstanden</button>
+  </div>
+</div>
 <div class="wrap">
   <h1>Arbeitszeitrechner</h1>
 
@@ -948,6 +994,24 @@
   render();
   update();
   setInterval(update, 1000);
+
+  // Kurze Erklärung beim allerersten Öffnen zeigen, danach nie wieder.
+  const ONBOARDING_KEY = "chip-aus-onboarding-seen";
+  const onboardingOverlay = document.getElementById("onboardingOverlay");
+  const onboardingCloseBtn = document.getElementById("onboardingCloseBtn");
+  try {
+    if (!localStorage.getItem(ONBOARDING_KEY)) {
+      onboardingOverlay.hidden = false;
+    }
+  } catch (e) {}
+  function closeOnboarding() {
+    onboardingOverlay.hidden = true;
+    try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch (e) {}
+  }
+  onboardingCloseBtn.addEventListener("click", closeOnboarding);
+  onboardingOverlay.addEventListener("click", (e) => {
+    if (e.target === onboardingOverlay) closeOnboarding();
+  });
 })();
 </script>
 </body>
