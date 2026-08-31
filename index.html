@@ -876,14 +876,14 @@
       const targetNettoForOpenBlock = sollMin - nettoClosed;
       const requiredOpenBrutto = bruttoForNetto(targetNettoForOpenBlock, 0);
       const remainingMinutes = requiredOpenBrutto - openBlockDuration;
-      const feierabendClock = fmtClock(nowMinutes + remainingMinutes);
-      if (remainingMinutes <= 0) {
-        feierabendValue.textContent = "jetzt";
-        feierabendValue.className = "stat-value small good";
-      } else {
-        feierabendValue.textContent = feierabendClock;
-        feierabendValue.className = "stat-value small";
-      }
+
+      // "Feierabend (vorauss.)" ist ein FESTES Ziel, sobald die Startzeit des
+      // Blocks feststeht (Start + benötigte Reststunden) - hängt bewusst NICHT
+      // von der echten, gerade aktuellen Uhrzeit ab. Springt also nicht auf
+      // "jetzt", nur weil real schon mehr Zeit vergangen ist, als eingetragen.
+      const fixedFeierabendClock = fmtClock(openStart + requiredOpenBrutto);
+      feierabendValue.textContent = fixedFeierabendClock;
+      feierabendValue.className = "stat-value small";
 
       // Countdown: ab 10 Sek. vor Feierabend anzeigen, in den letzten 3 Sek. piept's
       const remainingSeconds = remainingMinutes * 60;
