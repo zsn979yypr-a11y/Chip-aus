@@ -814,15 +814,14 @@
       liveNow = nowMinutes;
       if (liveNow < openStart) liveNow += 1440; // über Mitternacht
       openBlockDuration = liveNow - openStart;
-      brutto += openBlockDuration;
-      if (pairCount > 0) {
-        const prevEnd = usable[pairCount * 2 - 1];
-        bereitsPause += openStart - prevEnd;
-      }
       openAbzug = erforderlichePause(openBlockDuration);
     }
 
-    const abzug = abzugClosed + openAbzug;
+    // Brutto/bereits genommene Pause/Pausenabzug in der Meta-Zeile zeigen
+    // bewusst NUR die abgeschlossenen Blöcke - genau wie Netto/Überstunden.
+    // Eine offene Zeile fließt hier erst mit ein, sobald das "Aus" eingetragen
+    // wird (siehe "netto" weiter unten für die ausführliche Begründung).
+    const abzug = abzugClosed;
     // Netto/Überstunden/"Feierabend erreicht" werden bewusst NUR aus den
     // bereits abgeschlossenen Blöcken ermittelt. Eine offene Zeile (An ohne
     // Aus) zählt hier erst mit, sobald das Aus eingetragen wird - vorher
