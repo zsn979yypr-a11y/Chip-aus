@@ -274,7 +274,6 @@
   }
   .stat-value.good { color: var(--bavaria-blue); }
   .stat-value.danger { color: var(--danger); }
-  .stat-value.estimate { color: var(--muted); font-style: italic; }
   .divider {
     height: 1px;
     background: var(--border);
@@ -890,20 +889,6 @@
           countdownBanner.hidden = true;
         }
       }
-    } else if (usable.length > 0) {
-      // Kein Block gerade offen (z.B. während einer Pause) - trotzdem eine
-      // Schätzung zeigen: "Wenn ich JETZT weiterarbeite, wäre ich um X fertig."
-      const targetIfResumingNow = sollMin - nettoClosed;
-      if (targetIfResumingNow <= 0) {
-        feierabendValue.textContent = "jetzt";
-        feierabendValue.className = "stat-value small good";
-      } else {
-        const requiredBruttoIfResuming = bruttoForNetto(targetIfResumingNow, 0);
-        const estClock = fmtClock(nowMinutes + requiredBruttoIfResuming);
-        feierabendValue.textContent = "~" + estClock;
-        feierabendValue.className = "stat-value small estimate";
-      }
-      resetCountdown();
     } else {
       feierabendValue.textContent = "–";
       feierabendValue.className = "stat-value small";
