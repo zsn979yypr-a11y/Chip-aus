@@ -572,33 +572,46 @@
     const isOpen = usable.length % 2 === 1;
     const openStart = isOpen ? usable[usable.length - 1] : null;
 
+    // Jeder Arbeitsblock (ein An/Aus-Paar bzw. der laufende Block) wird für sich
+    // betrachtet: Pausen, die DANACH gemacht werden (z.B. Fitnessstudio), zählen
+    // nicht rückwirkend auf die Pausenpflicht eines Blocks ein, der bereits am
+    // Stück über 6 bzw. 9 Stunden ging.
     let brutto = 0;
     let bereitsPause = 0;
+    let nettoClosed = 0;
+    let abzugClosed = 0;
     let liveNow = null;
 
     for (let i = 0; i < pairCount; i++) {
       const start = usable[i * 2];
       const end = usable[i * 2 + 1];
-      brutto += end - start;
+      const blockDuration = end - start;
+      brutto += blockDuration;
       if (i > 0) {
         const prevEnd = usable[i * 2 - 1];
         bereitsPause += start - prevEnd;
       }
+      const blockAbzug = erforderlichePause(blockDuration);
+      abzugClosed += blockAbzug;
+      nettoClosed += blockDuration - blockAbzug;
     }
 
+    let openBlockDuration = 0;
+    let openAbzug = 0;
     if (isOpen) {
       liveNow = nowMinutes;
       if (liveNow < openStart) liveNow += 1440; // über Mitternacht
-      brutto += liveNow - openStart;
+      openBlockDuration = liveNow - openStart;
+      brutto += openBlockDuration;
       if (pairCount > 0) {
         const prevEnd = usable[pairCount * 2 - 1];
         bereitsPause += openStart - prevEnd;
       }
+      openAbzug = erforderlichePause(openBlockDuration);
     }
 
-    const erf = erforderlichePause(brutto);
-    const abzug = Math.max(0, erf - bereitsPause);
-    const netto = brutto - abzug;
+    const abzug = abzugClosed + openAbzug;
+    const netto = nettoClosed + (openBlockDuration - openAbzug);
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
 
@@ -616,8 +629,11 @@
     }
 
     if (isOpen) {
-      const requiredBrutto = bruttoForNetto(sollMin, bereitsPause);
-      const remainingMinutes = requiredBrutto - brutto;
+      // Wie viel Netto muss der GERADE LAUFENDE Block noch bringen, um aufs Soll
+      // zu kommen? Frühere, bereits abgeschlossene Blöcke stehen fest (nettoClosed).
+      const targetNettoForOpenBlock = sollMin - nettoClosed;
+      const requiredOpenBrutto = bruttoForNetto(targetNettoForOpenBlock, 0);
+      const remainingMinutes = requiredOpenBrutto - openBlockDuration;
       const feierabendClock = fmtClock(nowMinutes + remainingMinutes);
       if (remainingMinutes <= 0) {
         feierabendValue.textContent = "jetzt";
@@ -631,25 +647,21 @@
       feierabendValue.className = "stat-value small";
     }
 
-    // Warnzone: Weiterarbeiten bringt gerade nichts
-    const zone = findDipZone(brutto, bereitsPause);
-    if (zone) {
-      const startClockBrutto = brutto - zone.start; // wie viel Minuten sind wir schon in der Zone
-      let msg = "";
-      if (isOpen) {
-        const remaining = zone.end - brutto;
+    // Warnzone: Weiterarbeiten im LAUFENDEN Block bringt gerade nichts (bezieht
+    // sich nur auf den aktuell offenen Block, nicht auf frühere Blöcke – die
+    // stehen ja schon fest).
+    if (isOpen) {
+      const zone = findDipZone(openBlockDuration, 0);
+      if (zone) {
+        const remaining = zone.end - openBlockDuration;
         const untilClock = fmtClock(nowMinutes + remaining);
-        msg =
+        const msg =
           "Du bist gerade in der Pausenpflicht-Zone: Weiterarbeiten erhöht deine Netto-Zeit im Moment nicht, " +
           "weil dabei die Pausenpflicht greift. Erst ab <strong>" + untilClock + "</strong> " +
-          "(Brutto " + fmtDuration(zone.end) + ") lohnt sich Weiterarbeiten wieder.";
-      } else {
-        msg =
-          "Deine Brutto-Arbeitszeit liegt in der Pausenpflicht-Zone (" + fmtDuration(zone.start) +
-          " – " + fmtDuration(zone.end) + "). In diesem Bereich bringt zusätzliche Arbeitszeit keine höhere Netto-Zeit.";
+          "(Blockdauer " + fmtDuration(zone.end) + ") lohnt sich Weiterarbeiten wieder.";
+        warnBanner.innerHTML =
+          '<div class="warn-banner"><b>⚠️ Weiterarbeiten lohnt sich gerade nicht</b>' + msg + "</div>";
       }
-      warnBanner.innerHTML =
-        '<div class="warn-banner"><b>⚠️ Weiterarbeiten lohnt sich gerade nicht</b>' + msg + "</div>";
     }
 
     metaInfo.textContent =
