@@ -526,11 +526,18 @@
     return String(h).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
   }
 
-  function erforderlichePause(brutto) {
-    let req = 0;
-    if (brutto > THRESH_1) req = REQ_1;
-    if (brutto > THRESH_2) req = REQ_2;
-    return req;
+  // Netto-Zeit für einen einzelnen, am Stück gearbeiteten Block. Wichtig: das
+  // ist bewusst eine "Treppe ohne Stufen nach unten" - mehr Brutto-Zeit darf
+  // niemals zu WENIGER Netto führen. Direkt nach Überschreiten von 6 bzw. 9
+  // Std bleibt Netto deshalb erstmal auf dem Höchststand stehen (die
+  // zusätzlich gearbeitete Zeit "verbraucht" die Pflichtpause), statt
+  // sofort um die vollen 30/45 Minuten einzubrechen.
+  function nettoForBlock(brutto) {
+    if (brutto <= THRESH_1) return brutto;
+    if (brutto <= THRESH_1 + REQ_1) return THRESH_1;
+    if (brutto <= THRESH_2) return brutto - REQ_1;
+    if (brutto <= THRESH_2 + (REQ_2 - REQ_1)) return THRESH_2 - REQ_1;
+    return brutto - REQ_2;
   }
 
   // kleinste Brutto-Zeit, die die gewünschte Netto-Zeit ergibt (bei gegebener bereits genommener Pause P)
@@ -803,18 +810,16 @@
         const prevEnd = usable[i * 2 - 1];
         bereitsPause += start - prevEnd;
       }
-      const blockAbzug = erforderlichePause(blockDuration);
-      abzugClosed += blockAbzug;
-      nettoClosed += blockDuration - blockAbzug;
+      const blockNetto = nettoForBlock(blockDuration);
+      abzugClosed += blockDuration - blockNetto;
+      nettoClosed += blockNetto;
     }
 
     let openBlockDuration = 0;
-    let openAbzug = 0;
     if (isOpen) {
       liveNow = nowMinutes;
       if (liveNow < openStart) liveNow += 1440; // über Mitternacht
       openBlockDuration = liveNow - openStart;
-      openAbzug = erforderlichePause(openBlockDuration);
     }
 
     // Brutto/bereits genommene Pause/Pausenabzug in der Meta-Zeile zeigen
