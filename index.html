@@ -135,11 +135,34 @@
     color: var(--text);
     text-align: center;
   }
+  .punch-row-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .swipe-delete {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 84px;
+    border: none;
+    background: var(--danger);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .punch-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 0;
+    position: relative;
+    background: var(--card);
+    touch-action: pan-y;
+    transition: transform 0.18s ease;
   }
   .punch-tag {
     font-size: 13px;
@@ -171,6 +194,7 @@
     cursor: pointer;
   }
   .del-btn:hover { color: var(--danger); }
+  .punch-row.swiped .del-btn { opacity: 0; pointer-events: none; }
   .add-btn {
     width: 100%;
     margin-top: 6px;
@@ -562,11 +586,40 @@
     return null;
   }
 
+  const SWIPE_REVEAL = 84;
+  let openSwipeRow = null;
+
+  function closeSwipeRow(row) {
+    if (!row) return;
+    row.style.transform = "translateX(0px)";
+    row.classList.remove("swiped");
+    if (openSwipeRow === row) openSwipeRow = null;
+  }
+
   function render() {
     punchListEl.innerHTML = "";
+    openSwipeRow = null;
+
     state.times.forEach((t, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = "punch-row-wrap";
+
+      const swipeDel = document.createElement("button");
+      swipeDel.className = "swipe-delete";
+      swipeDel.type = "button";
+      swipeDel.textContent = "Löschen";
+      wrap.appendChild(swipeDel);
+
       const row = document.createElement("div");
       row.className = "punch-row";
+
+      const doDelete = () => {
+        state.times.splice(i, 1);
+        saveState();
+        render();
+        update();
+      };
+      swipeDel.addEventListener("click", doDelete);
 
       const tag = document.createElement("div");
       const isAn = i % 2 === 0;
@@ -588,15 +641,59 @@
       del.className = "del-btn";
       del.textContent = "✕";
       del.title = "Zeile löschen";
-      del.addEventListener("click", () => {
-        state.times.splice(i, 1);
-        saveState();
-        render();
-        update();
-      });
+      del.addEventListener("click", doDelete);
       row.appendChild(del);
 
-      punchListEl.appendChild(row);
+      // --- Wisch-Geste: nach links wischen legt den roten "Löschen"-Button frei ---
+      let dragging = false;
+      let startX = 0;
+      let startTransform = 0;
+      let moved = 0;
+
+      row.addEventListener("pointerdown", (e) => {
+        if (e.target === input) return; // Zeit-Eingabe bleibt normal antippbar
+        dragging = true;
+        moved = 0;
+        startX = e.clientX;
+        startTransform = openSwipeRow === row ? -SWIPE_REVEAL : 0;
+        row.style.transition = "none";
+      });
+
+      row.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const deltaX = e.clientX - startX;
+        moved = Math.max(moved, Math.abs(deltaX));
+        if (moved > 6) {
+          const newX = Math.min(0, Math.max(-SWIPE_REVEAL, startTransform + deltaX));
+          row.style.transform = "translateX(" + newX + "px)";
+        }
+      });
+
+      function endDrag(e) {
+        if (!dragging) return;
+        dragging = false;
+        row.style.transition = "transform 0.18s ease";
+        if (moved <= 6) {
+          // war nur ein Tap, keine Wisch-Geste
+          if (openSwipeRow === row) closeSwipeRow(row);
+          return;
+        }
+        const deltaX = (typeof e.clientX === "number" ? e.clientX : startX) - startX;
+        const finalX = startTransform + deltaX;
+        if (finalX < -SWIPE_REVEAL / 2) {
+          row.style.transform = "translateX(-" + SWIPE_REVEAL + "px)";
+          row.classList.add("swiped");
+          if (openSwipeRow && openSwipeRow !== row) closeSwipeRow(openSwipeRow);
+          openSwipeRow = row;
+        } else {
+          closeSwipeRow(row);
+        }
+      }
+      row.addEventListener("pointerup", endDrag);
+      row.addEventListener("pointercancel", endDrag);
+
+      wrap.appendChild(row);
+      punchListEl.appendChild(wrap);
     });
 
     sollInput.value = state.soll;
