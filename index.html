@@ -848,15 +848,14 @@
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
 
-    // Deutlich sichtbar machen, dass eine offene (nicht ausgestempelte) Zeile
-    // live mit der aktuellen Uhrzeit weiterrechnet - das ist sonst nicht
-    // offensichtlich und sorgt schnell für Verwirrung bei manuell eingetragenen
-    // Zeiten ("warum ist das schon so viel?").
+    // Nur sichtbar machen, DASS eine Zeile noch offen ist - bewusst OHNE
+    // Angabe einer live mit der echten Uhrzeit mitlaufenden Dauer, weil diese
+    // ja nirgends mehr in Netto/Überstunden einfließt (siehe "netto" oben)
+    // und sonst wie ein Widerspruch zu den eingefrorenen Werten wirkt.
     if (isOpen) {
       liveStatus.hidden = false;
       liveStatus.innerHTML =
-        "⏱ Läuft seit <strong>" + fmtClock(openStart) + "</strong> (noch nicht ausgestempelt) &middot; " +
-        "bisher <strong>" + fmtDuration(openBlockDuration) + "</strong> in diesem Block";
+        "⏱ Zeile offen seit <strong>" + fmtClock(openStart) + "</strong> (noch nicht ausgestempelt)";
     } else {
       liveStatus.hidden = true;
     }
