@@ -644,17 +644,23 @@
       del.addEventListener("click", doDelete);
       row.appendChild(del);
 
-      // --- Wisch-Geste: nach links wischen legt den roten "Löschen"-Button frei ---
+      // --- Wisch-Geste: nach links wischen legt den roten "Löschen"-Button frei.
+      // Die Geste darf überall auf der Zeile starten (auch auf dem Zeitfeld) -
+      // erst wenn die Bewegung eindeutig horizontal ist, übernehmen wir sie;
+      // ein normaler Tipp aufs Zeitfeld öffnet weiterhin ganz normal die Uhrzeit-Auswahl.
       let dragging = false;
+      let dragConfirmed = false;
       let startX = 0;
+      let startY = 0;
       let startTransform = 0;
       let moved = 0;
 
       row.addEventListener("pointerdown", (e) => {
-        if (e.target === input) return; // Zeit-Eingabe bleibt normal antippbar
         dragging = true;
+        dragConfirmed = false;
         moved = 0;
         startX = e.clientX;
+        startY = e.clientY;
         startTransform = openSwipeRow === row ? -SWIPE_REVEAL : 0;
         row.style.transition = "none";
       });
@@ -662,8 +668,21 @@
       row.addEventListener("pointermove", (e) => {
         if (!dragging) return;
         const deltaX = e.clientX - startX;
-        moved = Math.max(moved, Math.abs(deltaX));
-        if (moved > 6) {
+        const deltaY = e.clientY - startY;
+        if (!dragConfirmed) {
+          if (Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+            dragConfirmed = true;
+            // Falls das Zeitfeld gerade Fokus bekommen hat, dessen Uhrzeit-Auswahl
+            // wieder schließen, weil das hier jetzt eindeutig ein Wisch ist.
+            if (document.activeElement === input) input.blur();
+          } else if (Math.abs(deltaY) > 8) {
+            // eindeutig vertikal (Scrollen) -> Wisch-Geste abbrechen
+            dragging = false;
+            return;
+          }
+        }
+        if (dragConfirmed) {
+          moved = Math.max(moved, Math.abs(deltaX));
           const newX = Math.min(0, Math.max(-SWIPE_REVEAL, startTransform + deltaX));
           row.style.transform = "translateX(" + newX + "px)";
         }
@@ -673,11 +692,34 @@
         if (!dragging) return;
         dragging = false;
         row.style.transition = "transform 0.18s ease";
-        if (moved <= 6) {
+
+        if (!dragConfirmed) {
           // war nur ein Tap, keine Wisch-Geste
-          if (openSwipeRow === row) closeSwipeRow(row);
+          if (openSwipeRow === row) {
+            closeSwipeRow(row);
+            if (e.target === input) {
+              // verhindert, dass der Tap, der die offene Zeile schließt,
+              // gleichzeitig die Uhrzeit-Auswahl aufpoppen lässt
+              const suppressClick = (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                input.removeEventListener("click", suppressClick, true);
+              };
+              input.addEventListener("click", suppressClick, true);
+            }
+          }
           return;
         }
+
+        // War eine echte Wisch-Geste: den folgenden Klick auf das Zeitfeld
+        // unterdrücken, damit sich die Uhrzeit-Auswahl nicht ungewollt öffnet.
+        const suppressClick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          input.removeEventListener("click", suppressClick, true);
+        };
+        input.addEventListener("click", suppressClick, true);
+
         const deltaX = (typeof e.clientX === "number" ? e.clientX : startX) - startX;
         const finalX = startTransform + deltaX;
         if (finalX < -SWIPE_REVEAL / 2) {
