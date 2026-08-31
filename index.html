@@ -312,20 +312,10 @@
     pointer-events:none;
     text-align:center;
   }
-  .countdown-banner.urgent{
-    border-color:var(--danger);
-    color:var(--danger);
-    animation:countdown-pulse .5s ease-in-out infinite;
-  }
   .countdown-banner.done{
     border-color:var(--accent);
     color:var(--accent);
     font-size:1.7rem;
-    animation:none;
-  }
-  @keyframes countdown-pulse{
-    0%,100%{transform:translateX(-50%) scale(1);}
-    50%{transform:translateX(-50%) scale(1.18);}
   }
   .meta {
     font-size: 12px;
