@@ -458,21 +458,18 @@
       osc.stop(t0 + durationMs / 1000 + 0.02);
     } catch (e) {}
   }
-  function playCountdownTick() { beep(880, 150, 0.25); }
   function playFeierabendChime() {
     beep(660, 150, 0.28);
     setTimeout(() => beep(990, 320, 0.28), 160);
   }
 
-  let countdownLastSecond = null;
-  let feierabendChimePlayed = false;
   let feierabendChimeAt = null;
+  let lastGoalReached = false;
 
   function resetCountdown() {
     countdownBanner.hidden = true;
-    countdownLastSecond = null;
-    feierabendChimePlayed = false;
     feierabendChimeAt = null;
+    lastGoalReached = false;
   }
 
   let state = loadState();
@@ -840,7 +837,14 @@
     }
 
     const abzug = abzugClosed + openAbzug;
-    const netto = nettoClosed + (openBlockDuration - openAbzug);
+    // Netto/Überstunden/"Feierabend erreicht" werden bewusst NUR aus den
+    // bereits abgeschlossenen Blöcken ermittelt. Eine offene Zeile (An ohne
+    // Aus) zählt hier erst mit, sobald das Aus eingetragen wird - vorher
+    // würde sie sonst mit der echten Geräte-Uhrzeit weiterlaufen, was beim
+    // Nachtragen/Planen von Zeiten (die nicht der echten Uhrzeit entsprechen)
+    // zu Verwirrung führt ("Feierabend!" obwohl der Block gerade erst
+    // eingetragen wurde).
+    const netto = nettoClosed;
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
 
@@ -875,7 +879,6 @@
       // zu kommen? Frühere, bereits abgeschlossene Blöcke stehen fest (nettoClosed).
       const targetNettoForOpenBlock = sollMin - nettoClosed;
       const requiredOpenBrutto = bruttoForNetto(targetNettoForOpenBlock, 0);
-      const remainingMinutes = requiredOpenBrutto - openBlockDuration;
 
       // "Feierabend (vorauss.)" ist ein FESTES Ziel, sobald die Startzeit des
       // Blocks feststeht (Start + benötigte Reststunden) - hängt bewusst NICHT
@@ -884,39 +887,29 @@
       const fixedFeierabendClock = fmtClock(openStart + requiredOpenBrutto);
       feierabendValue.textContent = fixedFeierabendClock;
       feierabendValue.className = "stat-value small";
-
-      // Countdown: ab 10 Sek. vor Feierabend anzeigen, in den letzten 3 Sek. piept's
-      const remainingSeconds = remainingMinutes * 60;
-      if (remainingSeconds > 10.5) {
-        resetCountdown();
-      } else if (remainingSeconds > 0) {
-        const secLeft = Math.max(1, Math.ceil(remainingSeconds));
-        countdownBanner.hidden = false;
-        countdownBanner.className = "countdown-banner" + (secLeft <= 3 ? " urgent" : "");
-        countdownBanner.textContent = String(secLeft);
-        if (countdownLastSecond !== secLeft) {
-          countdownLastSecond = secLeft;
-          if (secLeft <= 3) playCountdownTick();
-        }
-      } else {
-        if (!feierabendChimePlayed) {
-          feierabendChimePlayed = true;
-          feierabendChimeAt = Date.now();
-          playFeierabendChime();
-        }
-        const sinceMs = feierabendChimeAt ? Date.now() - feierabendChimeAt : 99999;
-        if (sinceMs < 8000) {
-          countdownBanner.hidden = false;
-          countdownBanner.className = "countdown-banner done";
-          countdownBanner.textContent = "Feierabend! 🎉";
-        } else {
-          countdownBanner.hidden = true;
-        }
-      }
     } else {
       feierabendValue.textContent = "–";
       feierabendValue.className = "stat-value small";
-      resetCountdown();
+    }
+
+    // "Feierabend erreicht"-Meldung (Ton + Banner): löst NUR aus, wenn das
+    // Tagessoll durch abgeschlossene Blöcke (nettoClosed) neu erreicht wird -
+    // also z.B. genau in dem Moment, in dem du ein "Aus" einträgst, das dich
+    // über dein Soll bringt. Reagiert bewusst NICHT auf die Live-Uhrzeit einer
+    // noch offenen Zeile - siehe Begründung bei "netto" oben.
+    const goalReachedByClosedBlocks = rest <= 0;
+    if (goalReachedByClosedBlocks && !lastGoalReached) {
+      feierabendChimeAt = Date.now();
+      playFeierabendChime();
+    }
+    lastGoalReached = goalReachedByClosedBlocks;
+    const sinceChimeMs = feierabendChimeAt ? Date.now() - feierabendChimeAt : 99999;
+    if (goalReachedByClosedBlocks && sinceChimeMs < 8000) {
+      countdownBanner.hidden = false;
+      countdownBanner.className = "countdown-banner done";
+      countdownBanner.textContent = "Feierabend! 🎉";
+    } else {
+      countdownBanner.hidden = true;
     }
 
     // Warnzone: Weiterarbeiten im LAUFENDEN Block bringt gerade nichts (bezieht
