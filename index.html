@@ -271,6 +271,38 @@
     margin-bottom: 16px;
   }
   .warn-banner b { display: block; margin-bottom: 4px; font-size: 15px; }
+  .countdown-banner{
+    position:fixed;
+    left:50%;
+    bottom:110px;
+    transform:translateX(-50%);
+    z-index:50;
+    background:rgba(18,18,18,.94);
+    border:2px solid var(--accent);
+    border-radius:20px;
+    padding:14px 30px;
+    font-size:2.6rem;
+    font-weight:800;
+    color:var(--accent);
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+    pointer-events:none;
+    text-align:center;
+  }
+  .countdown-banner.urgent{
+    border-color:var(--danger);
+    color:var(--danger);
+    animation:countdown-pulse .5s ease-in-out infinite;
+  }
+  .countdown-banner.done{
+    border-color:var(--accent);
+    color:var(--accent);
+    font-size:1.7rem;
+    animation:none;
+  }
+  @keyframes countdown-pulse{
+    0%,100%{transform:translateX(-50%) scale(1);}
+    50%{transform:translateX(-50%) scale(1.18);}
+  }
   .meta {
     font-size: 12px;
     color: var(--muted);
@@ -304,6 +336,7 @@
   </div>
 
   <div id="warnBanner"></div>
+  <div id="countdownBanner" class="countdown-banner" hidden></div>
 
   <div class="card">
     <div class="stat">
@@ -354,6 +387,7 @@
   const sollInput = document.getElementById("sollInput");
   const errorMsg = document.getElementById("errorMsg");
   const warnBanner = document.getElementById("warnBanner");
+  const countdownBanner = document.getElementById("countdownBanner");
   const progressFill = document.getElementById("progressFill");
   const progressPct = document.getElementById("progressPct");
   const progressTarget = document.getElementById("progressTarget");
@@ -364,6 +398,49 @@
   const feierabendValue = document.getElementById("feierabendValue");
   const metaInfo = document.getElementById("metaInfo");
   const toggleBtn = document.getElementById("toggleBtn");
+
+  // --- Feierabend-Countdown: Ton in den letzten 3 Sekunden, Anzeige ab 10 ---
+  let audioCtx = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) {}
+  }
+  window.addEventListener("pointerdown", ensureAudio, { once: true });
+
+  function beep(freq, durationMs, gainVal) {
+    if (!audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t0 = audioCtx.currentTime;
+      gain.gain.setValueAtTime(gainVal, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + durationMs / 1000);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + durationMs / 1000 + 0.02);
+    } catch (e) {}
+  }
+  function playCountdownTick() { beep(880, 150, 0.25); }
+  function playFeierabendChime() {
+    beep(660, 150, 0.28);
+    setTimeout(() => beep(990, 320, 0.28), 160);
+  }
+
+  let countdownLastSecond = null;
+  let feierabendChimePlayed = false;
+  let feierabendChimeAt = null;
+
+  function resetCountdown() {
+    countdownBanner.hidden = true;
+    countdownLastSecond = null;
+    feierabendChimePlayed = false;
+    feierabendChimeAt = null;
+  }
 
   let state = loadState();
 
@@ -544,6 +621,7 @@
           nettoValue.textContent = "–";
           restValue.textContent = "–";
           feierabendValue.textContent = "–";
+          resetCountdown();
           return;
         }
       }
@@ -562,6 +640,7 @@
       feierabendValue.textContent = "–";
       restLabel.textContent = "Fehlt bis Soll";
       renderProgress(0, Number(state.soll) * 60);
+      resetCountdown();
       return;
     }
 
@@ -642,9 +721,39 @@
         feierabendValue.textContent = feierabendClock;
         feierabendValue.className = "stat-value small";
       }
+
+      // Countdown: ab 10 Sek. vor Feierabend anzeigen, in den letzten 3 Sek. piept's
+      const remainingSeconds = remainingMinutes * 60;
+      if (remainingSeconds > 10.5) {
+        resetCountdown();
+      } else if (remainingSeconds > 0) {
+        const secLeft = Math.max(1, Math.ceil(remainingSeconds));
+        countdownBanner.hidden = false;
+        countdownBanner.className = "countdown-banner" + (secLeft <= 3 ? " urgent" : "");
+        countdownBanner.textContent = String(secLeft);
+        if (countdownLastSecond !== secLeft) {
+          countdownLastSecond = secLeft;
+          if (secLeft <= 3) playCountdownTick();
+        }
+      } else {
+        if (!feierabendChimePlayed) {
+          feierabendChimePlayed = true;
+          feierabendChimeAt = Date.now();
+          playFeierabendChime();
+        }
+        const sinceMs = feierabendChimeAt ? Date.now() - feierabendChimeAt : 99999;
+        if (sinceMs < 8000) {
+          countdownBanner.hidden = false;
+          countdownBanner.className = "countdown-banner done";
+          countdownBanner.textContent = "Feierabend! 🎉";
+        } else {
+          countdownBanner.hidden = true;
+        }
+      }
     } else {
       feierabendValue.textContent = "–";
       feierabendValue.className = "stat-value small";
+      resetCountdown();
     }
 
     // Warnzone: Weiterarbeiten im LAUFENDEN Block bringt gerade nichts (bezieht
@@ -672,6 +781,7 @@
   }
 
   toggleBtn.addEventListener("click", () => {
+    ensureAudio();
     const len = usablePrefixLength(state.times);
     const lastVal = len > 0 ? parseHM(state.times[len - 1]) : null;
     const nowStr = currentHM();
@@ -703,7 +813,7 @@
 
   render();
   update();
-  setInterval(update, 15000);
+  setInterval(update, 1000);
 })();
 </script>
 </body>
