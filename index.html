@@ -241,13 +241,6 @@
   .toggle-btn .btn-icon { width: 13px; height: 13px; flex-shrink: 0; background: #14171b; box-shadow: 0 0 0 1.5px #fff; }
   .toggle-btn.start .btn-icon { border-radius: 50%; }
   .toggle-btn.stop .btn-icon { border-radius: 3px; }
-  .live-status {
-    text-align: center;
-    font-size: 13px;
-    color: var(--muted);
-    margin: -8px 0 16px;
-  }
-  .live-status strong { color: var(--text); }
   .card-hint {
     font-size: 12px;
     color: var(--muted);
@@ -349,7 +342,6 @@
   <button class="toggle-btn start" id="toggleBtn" type="button">
     <span class="btn-icon"></span>Start
   </button>
-  <div class="live-status" id="liveStatus" hidden></div>
 
   <div class="card">
     <div class="row-label">Tagessoll</div>
@@ -428,7 +420,6 @@
   const restLabel = document.getElementById("restLabel");
   const restValue = document.getElementById("restValue");
   const feierabendValue = document.getElementById("feierabendValue");
-  const liveStatus = document.getElementById("liveStatus");
   const metaInfo = document.getElementById("metaInfo");
   const toggleBtn = document.getElementById("toggleBtn");
 
@@ -766,7 +757,6 @@
           nettoValue.textContent = "–";
           restValue.textContent = "–";
           feierabendValue.textContent = "–";
-          liveStatus.hidden = true;
           resetCountdown();
           return;
         }
@@ -785,7 +775,6 @@
       restValue.textContent = fmtDuration(state.soll * 60);
       feierabendValue.textContent = "–";
       restLabel.textContent = "Fehlt bis Soll";
-      liveStatus.hidden = true;
       renderProgress(0, Number(state.soll) * 60);
       resetCountdown();
       return;
@@ -847,18 +836,6 @@
     const netto = nettoClosed;
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
-
-    // Nur sichtbar machen, DASS eine Zeile noch offen ist - bewusst OHNE
-    // Angabe einer live mit der echten Uhrzeit mitlaufenden Dauer, weil diese
-    // ja nirgends mehr in Netto/Überstunden einfließt (siehe "netto" oben)
-    // und sonst wie ein Widerspruch zu den eingefrorenen Werten wirkt.
-    if (isOpen) {
-      liveStatus.hidden = false;
-      liveStatus.innerHTML =
-        "⏱ Zeile offen seit <strong>" + fmtClock(openStart) + "</strong> (noch nicht ausgestempelt)";
-    } else {
-      liveStatus.hidden = true;
-    }
 
     nettoValue.textContent = fmtDuration(netto);
     nettoValue.className = "stat-value" + (netto >= sollMin ? " good" : "");
