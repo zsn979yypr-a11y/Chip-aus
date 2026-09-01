@@ -214,16 +214,11 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .toggle-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
   .toggle-btn {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
     padding: 18px;
     border: none;
     border-radius: var(--radius);
@@ -232,7 +227,8 @@
     color: #14171b;
     text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 2px #fff, 0 0 5px rgba(255,255,255,0.8);
     cursor: pointer;
-    transition: transform 0.06s ease, filter 0.15s ease, opacity 0.15s ease;
+    margin-bottom: 16px;
+    transition: transform 0.06s ease, filter 0.15s ease;
   }
   .toggle-btn:hover { filter: brightness(1.06); }
   .toggle-btn:active { transform: scale(0.985); }
@@ -247,13 +243,6 @@
     background-color: #e29a9a;
     background-size: 16px 16px;
     background-position: 0 0, 8px 8px;
-  }
-  .toggle-btn:disabled {
-    background-image: none !important;
-    background-color: var(--border);
-    color: var(--muted);
-    text-shadow: none;
-    cursor: default;
   }
   .card-hint {
     font-size: 12px;
@@ -389,10 +378,7 @@
 <div class="wrap">
   <h1>Arbeitszeitrechner</h1>
 
-  <div class="toggle-row">
-    <button class="toggle-btn start" id="kommenBtn" type="button">Kommen</button>
-    <button class="toggle-btn stop" id="gehenBtn" type="button" disabled>Gehen</button>
-  </div>
+  <button class="toggle-btn start" id="toggleBtn" type="button">Kommen</button>
 
   <div class="card">
     <div class="row-label">Tagessoll</div>
@@ -472,8 +458,7 @@
   const restValue = document.getElementById("restValue");
   const feierabendValue = document.getElementById("feierabendValue");
   const metaInfo = document.getElementById("metaInfo");
-  const kommenBtn = document.getElementById("kommenBtn");
-  const gehenBtn = document.getElementById("gehenBtn");
+  const toggleBtn = document.getElementById("toggleBtn");
 
   // --- Feierabend-Countdown: Ton in den letzten 3 Sekunden, Anzeige ab 10 ---
   let audioCtx = null;
@@ -556,8 +541,13 @@
   }
 
   function setToggleButton(open) {
-    kommenBtn.disabled = open;
-    gehenBtn.disabled = !open;
+    if (open) {
+      toggleBtn.className = "toggle-btn stop";
+      toggleBtn.textContent = "Gehen";
+    } else {
+      toggleBtn.className = "toggle-btn start";
+      toggleBtn.textContent = "Kommen";
+    }
   }
 
   function fmtDuration(totalMinutes) {
@@ -990,8 +980,7 @@
     render();
     update();
   }
-  kommenBtn.addEventListener("click", handleToggleClick);
-  gehenBtn.addEventListener("click", handleToggleClick);
+  toggleBtn.addEventListener("click", handleToggleClick);
 
   addBtn.addEventListener("click", () => {
     state.times.push("");
