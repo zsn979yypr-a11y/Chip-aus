@@ -856,25 +856,27 @@
     }
 
     let openBlockDuration = 0;
+    let openBlockNetto = 0;
     if (isOpen) {
       liveNow = nowMinutes;
       if (liveNow < openStart) liveNow += 1440; // über Mitternacht
       openBlockDuration = liveNow - openStart;
+      openBlockNetto = nettoForBlock(openBlockDuration);
+      brutto += openBlockDuration;
+      if (pairCount > 0) {
+        const prevEnd = usable[pairCount * 2 - 1];
+        bereitsPause += openStart - prevEnd;
+      }
     }
 
-    // Brutto/bereits genommene Pause/Pausenabzug in der Meta-Zeile zeigen
-    // bewusst NUR die abgeschlossenen Blöcke - genau wie Netto/Überstunden.
-    // Eine offene Zeile fließt hier erst mit ein, sobald das "Aus" eingetragen
-    // wird (siehe "netto" weiter unten für die ausführliche Begründung).
-    const abzug = abzugClosed;
-    // Netto/Überstunden/"Feierabend erreicht" werden bewusst NUR aus den
-    // bereits abgeschlossenen Blöcken ermittelt. Eine offene Zeile (An ohne
-    // Aus) zählt hier erst mit, sobald das Aus eingetragen wird - vorher
-    // würde sie sonst mit der echten Geräte-Uhrzeit weiterlaufen, was beim
-    // Nachtragen/Planen von Zeiten (die nicht der echten Uhrzeit entsprechen)
-    // zu Verwirrung führt ("Feierabend!" obwohl der Block gerade erst
-    // eingetragen wurde).
-    const netto = nettoClosed;
+    // Netto/Überstunden/Brutto zählen den offenen Block wieder live mit
+    // (echte Geräte-Uhrzeit), so wie es im echten Alltag - im Gegensatz zum
+    // Nachtragen von Zeiten, die nicht zur echten Uhrzeit passen - erwartet
+    // wird. Nutzt dabei die korrigierte, monotone nettoForBlock()-Formel, die
+    // den 6:04-Std-Bug von vorhin behebt (Netto kann nie sinken, wenn man
+    // länger arbeitet).
+    const abzug = abzugClosed + (openBlockDuration - openBlockNetto);
+    const netto = nettoClosed + openBlockNetto;
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
 
@@ -909,19 +911,18 @@
       feierabendValue.className = "stat-value small";
     }
 
-    // "Feierabend erreicht"-Meldung (Ton + Banner): löst NUR aus, wenn das
-    // Tagessoll durch abgeschlossene Blöcke (nettoClosed) neu erreicht wird -
-    // also z.B. genau in dem Moment, in dem du ein "Aus" einträgst, das dich
-    // über dein Soll bringt. Reagiert bewusst NICHT auf die Live-Uhrzeit einer
-    // noch offenen Zeile - siehe Begründung bei "netto" oben.
-    const goalReachedByClosedBlocks = rest <= 0;
-    if (goalReachedByClosedBlocks && !lastGoalReached) {
+    // "Feierabend erreicht"-Meldung (Ton + Banner): löst einmalig aus, sobald
+    // das Tagessoll neu erreicht wird - das passiert jetzt wieder live in
+    // Echtzeit während eines laufenden Blocks (echte Geräte-Uhrzeit), genauso
+    // wie beim Eintragen eines "Aus", das dich über dein Soll bringt.
+    const goalReached = rest <= 0;
+    if (goalReached && !lastGoalReached) {
       feierabendChimeAt = Date.now();
       playFeierabendChime();
     }
-    lastGoalReached = goalReachedByClosedBlocks;
+    lastGoalReached = goalReached;
     const sinceChimeMs = feierabendChimeAt ? Date.now() - feierabendChimeAt : 99999;
-    if (goalReachedByClosedBlocks && sinceChimeMs < 8000) {
+    if (goalReached && sinceChimeMs < 8000) {
       countdownBanner.hidden = false;
       countdownBanner.className = "countdown-banner done";
       countdownBanner.textContent = "Feierabend! 🎉";
