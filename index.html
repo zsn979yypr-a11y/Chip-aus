@@ -964,12 +964,22 @@
     renderProgress(netto, sollMin);
   }
 
+  const EARLIEST_START_MIN = 360; // 6:00 Uhr - fruehestmoegliche Arbeitszeit lt. Vorgabe
+
   function handleToggleClick() {
     ensureAudio();
     const len = usablePrefixLength(state.times);
     const lastVal = len > 0 ? parseHM(state.times[len - 1]) : null;
-    const nowStr = currentHM();
-    const nowVal = parseHM(nowStr);
+    const isKommen = len % 2 === 0;
+    let nowStr = currentHM();
+    let nowVal = parseHM(nowStr);
+    // Wer vor 6:00 Uhr auf "Kommen" drueckt (z.B. schon im Buero, aber die
+    // Arbeitszeit darf erst ab 6:00 zaehlen), bekommt automatisch 6:00
+    // eingetragen statt der tatsaechlichen, zu fruehen Uhrzeit.
+    if (isKommen && nowVal < EARLIEST_START_MIN) {
+      nowVal = EARLIEST_START_MIN;
+      nowStr = fmtClock(EARLIEST_START_MIN);
+    }
     if (lastVal !== null && nowVal < lastVal) {
       errorMsg.textContent = "Die Uhrzeit liegt vor dem letzten Stempel.";
       return;
