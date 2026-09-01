@@ -234,20 +234,25 @@
   .toggle-btn:hover { filter: brightness(1.06); }
   .toggle-btn:active { transform: scale(0.985); }
   .toggle-btn.start {
-    background-image: var(--bavaria-diamond);
-    background-color: #4f9468;
-    background-size: 16px 16px;
-    background-position: 0 0, 8px 8px;
+    background-color: #8fc98f;
   }
   .toggle-btn.stop {
-    background-image: var(--bavaria-diamond);
-    background-color: #c15c53;
-    background-size: 16px 16px;
-    background-position: 0 0, 8px 8px;
+    background-color: #e29a9a;
   }
   .toggle-btn .btn-icon { width: 13px; height: 13px; flex-shrink: 0; background: #14171b; box-shadow: 0 0 0 1.5px #fff; }
   .toggle-btn.start .btn-icon { border-radius: 50%; }
   .toggle-btn.stop .btn-icon { border-radius: 3px; }
+  .status-bar {
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: #14171b;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .status-bar.an { background: #8fc98f; }
+  .status-bar.ab { background: #e29a9a; }
   .card-hint {
     font-size: 12px;
     color: var(--muted);
@@ -382,8 +387,10 @@
 <div class="wrap">
   <h1>Arbeitszeitrechner</h1>
 
+  <div class="status-bar" id="statusBar" hidden></div>
+
   <button class="toggle-btn start" id="toggleBtn" type="button">
-    <span class="btn-icon"></span>Start
+    <span class="btn-icon"></span>Kommen
   </button>
 
   <div class="card">
@@ -465,6 +472,7 @@
   const feierabendValue = document.getElementById("feierabendValue");
   const metaInfo = document.getElementById("metaInfo");
   const toggleBtn = document.getElementById("toggleBtn");
+  const statusBar = document.getElementById("statusBar");
 
   // --- Feierabend-Countdown: Ton in den letzten 3 Sekunden, Anzeige ab 10 ---
   let audioCtx = null;
@@ -549,11 +557,25 @@
   function setToggleButton(open) {
     if (open) {
       toggleBtn.className = "toggle-btn stop";
-      toggleBtn.innerHTML = '<span class="btn-icon"></span>Stop';
+      toggleBtn.innerHTML = '<span class="btn-icon"></span>Gehen';
     } else {
       toggleBtn.className = "toggle-btn start";
-      toggleBtn.innerHTML = '<span class="btn-icon"></span>Start';
+      toggleBtn.innerHTML = '<span class="btn-icon"></span>Kommen';
     }
+  }
+
+  const WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  function fmtStatusTimestamp(totalMinutesOfDay) {
+    const now = new Date();
+    const weekday = WEEKDAYS[now.getDay()];
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    let m = Math.round(totalMinutesOfDay) % 1440;
+    if (m < 0) m += 1440;
+    const h = Math.floor(m / 60);
+    const mm = String(m % 60).padStart(2, "0");
+    return weekday + ", den " + day + "." + month + "." + year + " " + h + ":" + mm;
   }
 
   function fmtDuration(totalMinutes) {
@@ -807,6 +829,7 @@
           nettoValue.textContent = "–";
           restValue.textContent = "–";
           feierabendValue.textContent = "–";
+          statusBar.hidden = true;
           resetCountdown();
           return;
         }
@@ -825,6 +848,7 @@
       restValue.textContent = fmtDuration(state.soll * 60);
       feierabendValue.textContent = "–";
       restLabel.textContent = "Fehlt bis Soll";
+      statusBar.hidden = true;
       renderProgress(0, Number(state.soll) * 60);
       resetCountdown();
       return;
@@ -883,6 +907,22 @@
     const netto = nettoClosed;
     const sollMin = Number(state.soll) * 60;
     const rest = sollMin - netto;
+
+    // Statuszeile im Stil der Zeiterfassung am Arbeitsplatz: "AN seit ..."
+    // (grün, solange eingecheckt) bzw. "AB seit ..." (die letzte Aus-Zeit,
+    // solange gerade nicht eingecheckt).
+    if (isOpen) {
+      statusBar.hidden = false;
+      statusBar.className = "status-bar an";
+      statusBar.textContent = "AN seit " + fmtStatusTimestamp(openStart);
+    } else if (pairCount > 0) {
+      const lastAus = usable[pairCount * 2 - 1];
+      statusBar.hidden = false;
+      statusBar.className = "status-bar ab";
+      statusBar.textContent = "AB seit " + fmtStatusTimestamp(lastAus);
+    } else {
+      statusBar.hidden = true;
+    }
 
     nettoValue.textContent = fmtDuration(netto);
     nettoValue.className = "stat-value" + (netto >= sollMin ? " good" : "");
